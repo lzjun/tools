@@ -45,7 +45,7 @@ public class ElegantFibonacci implements Iterator<Long> {
 		ElegantFibonacci f = new ElegantFibonacci(50);
 
 		while (f.hasNext()) {
-			System.out.println(f.next());
+			System.out.print(f.next()+",");
 
 		}
 
