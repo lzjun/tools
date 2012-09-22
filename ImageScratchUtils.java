@@ -1,3 +1,5 @@
+package com.lzjun;
+
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -12,42 +14,44 @@ import java.util.Set;
 
 /**
  * @author lzjun
+ * @email lzjun567@gmail.com
  * 
  */
 public class ImageScratchUtils {
 
 	private URI uri;
-	
+
 	public ImageScratchUtils(String uri) {
 		try {
 			this.uri = new URI(uri);
 		} catch (URISyntaxException e) {
 			e.printStackTrace();
-		} 
+		}
 	}
 	
-	public Set<String> getImgTages() {
+	/**
+	 * 获取 资源标签集合
+	 * @param pattern  
+	 * @return
+	 */
+	public Set<String> getTags(String pattern){
 		Set<String> set = new HashSet<String>();
 		try {
 			URLConnection conn = uri.toURL().openConnection();
-
 			InputStream in = conn.getInputStream();
 			byte[] tmp = new byte[1024];
 			StringBuilder sbuilder = new StringBuilder(2048);
 			int len;
 			while ((len = in.read(tmp)) != -1) {
-				sbuilder.append(new String(tmp, 0, len,"utf-8"));
+				sbuilder.append(new String(tmp, 0, len, "utf-8"));
 			}
 			String pageContent = sbuilder.toString();
 
-			String regex = "<img";
-			String[] imgTags = pageContent.split(regex);
-
+			String[] imgTags = pageContent.split(pattern);
 
 			for (int i = 1; i < imgTags.length; i++) {
 				String temp = imgTags[i];
-				set.add(regex + temp.substring(0, temp.indexOf(">")+1));
-				
+				set.add(pattern + temp.substring(0, temp.indexOf(">") + 1));
 			}
 
 		} catch (MalformedURLException e) {
@@ -61,84 +65,89 @@ public class ImageScratchUtils {
 		return set;
 	}
 
-	
-	private URL parseImgTag(String tag) {
+	/**
+	 * 解析 标签 ,返回资源的url
+	 * @param tag
+	 * @return
+	 */
+	private Set<URL> parseTag(String pattern){
+		Set<String> tags = getTags(pattern);
 		
-		int index = tag.indexOf("src=")+4;
-		char firstQuotes = tag.charAt(index);
+		Set<URL> set = new HashSet<URL>();
 		
-		int begainIndex = tag.indexOf(firstQuotes,index)+1;
-		int endIndex = tag.indexOf(firstQuotes,begainIndex);
-		String urlStr = tag.substring(begainIndex,endIndex);
-		
-		URL url = null;
-		try {
-			System.out.println(urlStr);
-			if(urlStr.startsWith("/")){
-				urlStr = uri.getScheme()+"://"+uri.getHost()+urlStr;
+		for (String tag : tags) {
+			System.out.println(tag);
+			int index = tag.indexOf("http://");
+			if(index!=-1){
+				int endIndex  = tag.indexOf("\"", index);
+				String urlStr = tag.substring(index, endIndex);
+
+				URL url = null;
+				try {
+					if (urlStr.startsWith("/")) {
+						urlStr = uri.getScheme() + "://" + uri.getHost() + urlStr;
+					}
+					url = new URL(urlStr);
+				} catch (MalformedURLException e) {
+					e.printStackTrace();
+				}
+				set.add(url);
 			}
-			System.out.println(urlStr);
-			url = new URL(urlStr);
-		} catch (MalformedURLException e) {
-			e.printStackTrace();
-		}
-		return url;
-		
+			
+			}
+			
+		return set;
 	}
-	
-	private void saveImg(URL url){
-		
-		URLConnection conn;
-		try {
-			conn = url.openConnection();
-			InputStream in = conn.getInputStream();
-			
-			String dir = url.getPath().substring(0, url.getPath().lastIndexOf("/"));
-			
-			
-			dir = System.getProperty("user.home")+dir;
-			
-			
-			
-			File file = new File(dir);
-			
-			
-			if(!file.exists()){
-				file.mkdirs();
-			}
-			
-			 String fileName = url.getFile().substring(url.getFile().lastIndexOf("/")+1);
-			
-			FileOutputStream fos = new FileOutputStream(file.getAbsolutePath()+"/"+fileName);
-			
-			byte[] tmp = new byte[1024];
-			
-			int len;
-			
-			while((len=in.read(tmp))!=-1){
-				fos.write(tmp, 0, len);
-			}
-			System.out.println(url.getFile()+ "is saved");
-			fos.flush();
-			fos.close();
-			in.close();
-		} catch (IOException e) {
-			e.printStackTrace();
+
+	/**
+	 * save resource
+	 * @param url
+	 */
+	private void downloadReosurce(Set<URL> urls) {
+
+		String dir = System.getProperty("user.home") + "/downloads";
+		File file = new File(dir);
+
+		if (!file.exists()) {
+			file.mkdirs();
 		}
 		
+		for (URL url : urls) {
+			URLConnection conn;
+			try {
+				conn = url.openConnection();
+				InputStream in = conn.getInputStream();
+			
+				String fileName = url.getFile().substring(
+						url.getFile().lastIndexOf("/") + 1);
+
+				FileOutputStream fos = new FileOutputStream(file.getAbsolutePath()
+						+ "/" + fileName);
+
+				byte[] tmp = new byte[1024];
+
+				int len;
+
+				while ((len = in.read(tmp)) != -1) {
+					fos.write(tmp, 0, len);
+				}
+				System.out.println(url.getFile() + "is saved");
+				fos.flush();
+				fos.close();
+				in.close();
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+		}
+		
+		
+
 	}
-	
+
 	public static void main(String[] args) throws Exception {
-		
-		ImageScratchUtils obj =new ImageScratchUtils("http://www.douban.com/");
-		Set<String> set = obj.getImgTages();
-		
-		System.out.println(set);
-		for (String tag : set) {
-			URL url = obj.parseImgTag(tag);
-			if(url!=null)
-				obj.saveImg(url);
-		}
-		
+
+		ImageScratchUtils obj = new ImageScratchUtils("http://www.himdc.com/ppt/1061.html");
+
+		obj.downloadReosurce(obj.parseTag("<a href="));
 	}
 }
