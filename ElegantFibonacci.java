@@ -6,7 +6,7 @@ import java.util.Iterator;
  * 替换原则就是 first用second替换,second用当前second值加上替换前的fris值
  * @author lzjun
  */
-
+ 
 public class ElegantFibonacci implements Iterator<Long> {
 
 	private long first = 0;
